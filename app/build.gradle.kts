@@ -41,9 +41,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11 // Set Java source compatibility to 11
         targetCompatibility = JavaVersion.VERSION_11 // Set Java target compatibility to 11
     }
-    // Block for Kotlin compiler options
-    kotlinOptions {
-        jvmTarget = "11" // Set the JVM target version to 11
+}
+
+// Kotlin compiler options
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) // Set the JVM target version to 11
     }
 }
 
@@ -59,27 +62,24 @@ dependencies {
     androidTestImplementation(libs.androidx.junit) // Add dependency for AndroidX JUnit
     androidTestImplementation(libs.androidx.espresso.core) // Add dependency for Espresso Core
 
-    //noinspection UseTomlInstead // Lottie Animations...
-    implementation("com.airbnb.android:lottie:6.6.7") // Add dependency for Lottie Animations
+    // Lottie Animations...
+    implementation(libs.lottie) // Add dependency for Lottie Animations
 
-    //noinspection UseTomlInstead // Retrofit core library
-    implementation ("com.squareup.retrofit2:retrofit:3.0.0") // Add dependency for Retrofit networking library
+    // Retrofit core library
+    implementation (libs.retrofit) // Add dependency for Retrofit networking library
 
-    //noinspection UseTomlInstead // Retrofit converter for Gson
-    implementation ("com.squareup.retrofit2:converter-gson:3.0.0") // Add dependency for Gson converter
+    // Retrofit converter for Gson
+    implementation (libs.retrofit.converter.gson) // Add dependency for Gson converter
 
-    // noinspection UseTomlInstead // Optional: OkHttp if not already included by Retrofit's transitive dependencies
-    // implementation ("com.squareup.okhttp3:okhttp:4.9.0")
+    // SPLASH SCREEN
+    implementation(libs.androidx.core.splashscreen) // Add dependency for Splash Screen
 
-    //noinspection UseTomlInstead // SPLASH SCREEN
-    implementation("androidx.core:core-splashscreen:1.0.1") // Add dependency for Splash Screen
+    // FANCY TOAST
+    implementation(libs.fancyToast) // Add dependency for FancyToast
 
-    //noinspection UseTomlInstead // FANCY TOAST
-    implementation("io.github.shashank02051997:FancyToast:2.0.2") // Add dependency for FancyToast
+    // Play Services Location
+    implementation(libs.play.services.location) // Add dependency for Play Services Location
 
-    //noinspection UseTomlInstead
-    implementation("com.google.android.gms:play-services-location:21.3.0") // Add dependency for Play Services Location
-
-    //noinspection UseTomlInstead // CUSTOM SWEET ALERT DIALOGUE
-    implementation("com.github.f0ris.sweetalert:library:1.6.2") // Add dependency for Sweet Alert Dialog
+    // CUSTOM SWEET ALERT DIALOGUE
+    implementation(libs.sweetalert) // Add dependency for Sweet Alert Dialog
 }

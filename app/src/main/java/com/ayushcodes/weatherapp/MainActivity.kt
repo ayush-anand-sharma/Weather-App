@@ -193,17 +193,26 @@ class MainActivity : AppCompatActivity() {
     // Function to update the UI with weather data
     @SuppressLint("SetTextI18n")
     private fun updateUI(cityName: String, responseBody: WeatherApp) {
-        binding.temp.text = "${responseBody.main.temp} °C" // Set temperature
-        binding.windSpeed.text = "${responseBody.wind.speed} m/s" // Set wind speed
-        binding.humidity.text = "${responseBody.main.humidity} %" // Set humidity
-        binding.sunrise.text = "${time(responseBody.sys.sunrise.toLong())} am" // Set sunrise time
-        binding.sunset.text = "${time(responseBody.sys.sunset.toLong())} pm" // Set sunset time
-        binding.sea.text = "${responseBody.main.sea_level} hPa" // Set sea level pressure
+        val main = responseBody.main // Extract main weather data, nullable
+        val wind = responseBody.wind // Extract wind data, nullable
+        val sys = responseBody.sys // Extract system data, nullable
+        val weatherList = responseBody.weather // Extract weather list, nullable
 
-        val condition = responseBody.weather.firstOrNull()?.main ?: "unknown" // Get weather condition
+        binding.temp.text = "${main?.temp ?: 0.0} °C" // Set temperature with null check, default 0.0
+        binding.windSpeed.text = "${wind?.speed ?: 0.0} m/s" // Set wind speed with null check, default 0.0
+        binding.humidity.text = "${main?.humidity ?: 0} %" // Set humidity with null check, default 0
+        
+        val sunrise = sys?.sunrise?.toLong() ?: 0L // Get sunrise with null check, default 0L
+        val sunset = sys?.sunset?.toLong() ?: 0L // Get sunset with null check, default 0L
+        binding.sunrise.text = "${time(sunrise)} am" // Set sunrise time
+        binding.sunset.text = "${time(sunset)} pm" // Set sunset time
+        
+        binding.sea.text = "${main?.sea_level ?: 0} hPa" // Set sea level with null check, default 0
+
+        val condition = weatherList?.firstOrNull()?.main ?: "unknown" // Get weather condition safely, default unknown
         binding.conditions.text = condition // Set condition text
-        binding.maxTemp.text = "Max: ${responseBody.main.temp_max} °C" // Set max temp
-        binding.minTemp.text = "Min: ${responseBody.main.temp_min} °C" // Set min temp
+        binding.maxTemp.text = "Max: ${main?.temp_max ?: 0.0} °C" // Set max temp with null check, default 0.0
+        binding.minTemp.text = "Min: ${main?.temp_min ?: 0.0} °C" // Set min temp with null check, default 0.0
         binding.weather.text = condition // Set weather text
 
         binding.day.text = dayName(System.currentTimeMillis()) // Set day name
