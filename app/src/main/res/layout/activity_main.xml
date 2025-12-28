@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Root ConstraintLayout for the Main Activity -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -9,6 +10,7 @@
     tools:context=".MainActivity"
     tools:ignore="VisualLintTextFieldSize">
 
+    <!-- SearchView for searching cities -->
     <SearchView
         android:id="@+id/searchView"
         android:layout_width="0dp"
@@ -24,6 +26,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <!-- TextView for displaying the city name -->
     <TextView
         android:id="@+id/cityName"
         android:layout_width="wrap_content"
@@ -38,6 +41,7 @@
         app:layout_constraintStart_toStartOf="@+id/searchView"
         app:layout_constraintTop_toBottomOf="@+id/searchView" />
 
+    <!-- LottieAnimationView for weather animations -->
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/lottieAnimationView"
         android:layout_width="150dp"
@@ -50,6 +54,7 @@
         app:lottie_rawRes="@raw/sun"
         tools:ignore="ImageContrastCheck" />
 
+    <!-- TextView showing "Today" label -->
     <TextView
         android:id="@+id/textView3"
         android:layout_width="wrap_content"
@@ -64,6 +69,7 @@
         app:layout_constraintTop_toBottomOf="@+id/cityName"
         tools:ignore="HardcodedText" />
 
+    <!-- TextView for the current temperature -->
     <TextView
         android:id="@+id/temp"
         android:layout_width="wrap_content"
@@ -77,6 +83,7 @@
         app:layout_constraintTop_toBottomOf="@+id/textView3"
         tools:ignore="HardcodedText" />
 
+    <!-- TextView for weather condition description -->
     <TextView
         android:id="@+id/weather"
         android:layout_width="wrap_content"
@@ -92,6 +99,7 @@
         app:layout_constraintTop_toBottomOf="@+id/lottieAnimationView"
         tools:ignore="HardcodedText" />
 
+    <!-- TextView for maximum temperature -->
     <TextView
         android:id="@+id/maxTemp"
         android:layout_width="wrap_content"
@@ -105,6 +113,7 @@
         app:layout_constraintTop_toBottomOf="@+id/weather"
         tools:ignore="HardcodedText" />
 
+    <!-- TextView for minimum temperature -->
     <TextView
         android:id="@+id/minTemp"
         android:layout_width="wrap_content"
@@ -118,6 +127,7 @@
         app:layout_constraintTop_toBottomOf="@+id/maxTemp"
         tools:ignore="HardcodedText" />
 
+    <!-- TextView for the day of the week -->
     <TextView
         android:id="@+id/day"
         android:layout_width="wrap_content"
@@ -132,6 +142,7 @@
         app:layout_constraintTop_toBottomOf="@+id/minTemp"
         tools:ignore="HardcodedText,VisualLintOverlap" />
 
+    <!-- TextView for the date -->
     <TextView
         android:id="@+id/date"
         android:layout_width="wrap_content"
@@ -145,6 +156,7 @@
         app:layout_constraintTop_toBottomOf="@+id/day"
         tools:ignore="HardcodedText,VisualLintOverlap" />
 
+    <!-- ConstraintLayout container for weather details grid -->
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="375dp"
         android:layout_height="250dp"
@@ -160,6 +172,7 @@
         app:layout_constraintVertical_bias="1.0"
         tools:ignore="MissingClass">
 
+        <!-- Flow helper to arrange weather detail items -->
         <androidx.constraintlayout.helper.widget.Flow
             android:id="@+id/viewsLayout"
             android:layout_width="0dp"
@@ -173,6 +186,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
+        <!-- Layout for Humidity -->
         <LinearLayout
             android:id="@+id/linearLayout1"
             android:layout_width="110dp"
@@ -214,6 +228,7 @@
                 tools:ignore="HardcodedText,SmallSp" />
         </LinearLayout>
 
+        <!-- Layout for Wind Speed -->
         <LinearLayout
             android:id="@+id/linearLayout2"
             android:layout_width="110dp"
@@ -255,6 +270,7 @@
                 tools:ignore="HardcodedText,SmallSp" />
         </LinearLayout>
 
+        <!-- Layout for Weather Condition -->
         <LinearLayout
             android:id="@+id/linearLayout3"
             android:layout_width="110dp"
@@ -295,6 +311,7 @@
                 tools:ignore="HardcodedText,SmallSp" />
         </LinearLayout>
 
+        <!-- Layout for Sunrise -->
         <LinearLayout
             android:id="@+id/linearLayout4"
             android:layout_width="110dp"
@@ -335,6 +352,7 @@
                 tools:ignore="HardcodedText,SmallSp" />
         </LinearLayout>
 
+        <!-- Layout for Sunset -->
         <LinearLayout
             android:id="@+id/linearLayout5"
             android:layout_width="110dp"
@@ -375,6 +393,7 @@
                 tools:ignore="HardcodedText,SmallSp" />
         </LinearLayout>
 
+        <!-- Layout for Sea Level Pressure -->
         <LinearLayout
             android:id="@+id/linearLayout6"
             android:layout_width="110dp"
@@ -419,6 +438,7 @@
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
+    <!-- Footer text -->
     <TextView
         android:id="@+id/textView13"
         android:layout_width="wrap_content"

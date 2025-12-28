@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Shape drawable definition for the search view background -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solid color fill with transparency (hex 80 for alpha) -->
     <solid
         android:color="#80000000"/>
+    <!-- Rounded corners with a radius of 10dp -->
     <corners
         android:radius="10dp"/>
 

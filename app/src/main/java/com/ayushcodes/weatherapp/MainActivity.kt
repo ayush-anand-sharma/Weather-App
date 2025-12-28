@@ -11,58 +11,62 @@
 "sys":{"country":"IN","sunrise":1757551233,"sunset":1757595998},
 "timezone":19800,"id":1269515,"name":"Jaipur","cod":200}*/
 
-package com.ayushcodes.weatherapp
+package com.ayushcodes.weatherapp // Defines the package name for this file
 
-import android.annotation.SuppressLint
-import android.content.Context
-import android.net.ConnectivityManager
-import android.net.Network
-import android.net.NetworkCapabilities
-import android.os.Bundle
-import android.widget.SearchView
-import androidx.activity.OnBackPressedCallback
-import androidx.activity.enableEdgeToEdge
-import androidx.appcompat.app.AppCompatActivity
-import cn.pedant.SweetAlert.SweetAlertDialog
-import com.ayushcodes.weatherapp.databinding.ActivityMainBinding
-import com.google.gson.Gson
-import com.shashank.sony.fancytoastlib.FancyToast
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import android.annotation.SuppressLint // Imports SuppressLint annotation
+import android.content.Context // Imports Context class for accessing application environment
+import android.net.ConnectivityManager // Imports ConnectivityManager for checking network connection
+import android.net.Network // Imports Network class
+import android.net.NetworkCapabilities // Imports NetworkCapabilities for checking network capabilities
+import android.os.Bundle // Imports Bundle class for passing data between activities
+import android.widget.SearchView // Imports SearchView for search functionality
+import androidx.activity.OnBackPressedCallback // Imports OnBackPressedCallback for handling back button
+import androidx.activity.enableEdgeToEdge // Imports enableEdgeToEdge for full-screen display
+import androidx.appcompat.app.AppCompatActivity // Imports AppCompatActivity as the base class for activities
+import cn.pedant.SweetAlert.SweetAlertDialog // Imports SweetAlertDialog for custom alert dialogs
+import com.ayushcodes.weatherapp.databinding.ActivityMainBinding // Imports ViewBinding class for main activity layout
+import com.google.gson.Gson // Imports Gson for JSON parsing
+import com.shashank.sony.fancytoastlib.FancyToast // Imports FancyToast for custom toast messages
+import retrofit2.Call // Imports Call class from Retrofit
+import retrofit2.Callback // Imports Callback interface from Retrofit
+import retrofit2.Response // Imports Response class from Retrofit
+import retrofit2.Retrofit // Imports Retrofit class
+import retrofit2.converter.gson.GsonConverterFactory // Imports GsonConverterFactory for Retrofit
+import java.text.SimpleDateFormat // Imports SimpleDateFormat for formatting dates
+import java.util.Date // Imports Date class
+import java.util.Locale // Imports Locale class
 
-@Suppress("USELESS_ELVIS")
+@Suppress("USELESS_ELVIS") // Suppresses lint warning for useless elvis operator
+// Main Activity class where the app logic resides
 class MainActivity : AppCompatActivity() {
 
+    // Lazy initialization of ViewBinding for accessing layout views
     private val binding: ActivityMainBinding by lazy {
         ActivityMainBinding.inflate(layoutInflater)
     }
 
-    private lateinit var connectivityManager: ConnectivityManager
-    private lateinit var networkCallback: ConnectivityManager.NetworkCallback
-    private var isConnected = false
+    private lateinit var connectivityManager: ConnectivityManager // Manager for handling network connectivity
+    private lateinit var networkCallback: ConnectivityManager.NetworkCallback // Callback for network changes
+    private var isConnected = false // Flag to track network connection status
 
-    private val PREFS_NAME = "WeatherPrefs"
-    private val LAST_RESPONSE = "LastWeatherResponse"
+    private val PREFS_NAME = "WeatherPrefs" // Name for SharedPreferences file
+    private val LAST_RESPONSE = "LastWeatherResponse" // Key for storing last weather response
 
+    // Called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
-        setContentView(binding.root)
+        super.onCreate(savedInstanceState) // Call superclass method
+        enableEdgeToEdge() // Enable edge-to-edge display
+        setContentView(binding.root) // Set the content view to the root of the binding
 
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager // Initialize ConnectivityManager
 
-        registerNetworkCallback()
+        registerNetworkCallback() // Register network callback to monitor connection changes
 
+        // Check if internet is available
         if (checkInternet()) {
-            fetchWeatherData("Jaipur")
+            fetchWeatherData("Jaipur") // Fetch weather data for default city Jaipur
         } else {
-            showLastUpdatedData()
+            showLastUpdatedData() // Show last saved data if no internet
             FancyToast.makeText(
                 this,
                 "Network error, please check your internet connection",
@@ -70,35 +74,38 @@ class MainActivity : AppCompatActivity() {
                 FancyToast.ERROR,
                 R.drawable.white_cloud,
                 false
-            ).show()
+            ).show() // Show error toast
         }
-        SearchCity()
+        SearchCity() // Initialize search functionality
 
+        // Handle back button press
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
+                // Show confirmation dialog before exiting
                 SweetAlertDialog(this@MainActivity, SweetAlertDialog.WARNING_TYPE)
                     .setTitleText("Exit App")
                     .setContentText("You Really Want To Exit The App?")
                     .setConfirmText("Yes")
                     .setConfirmClickListener { sDialog ->
                         sDialog.dismissWithAnimation()
-                        finish()
+                        finish() // Exit the app
                     }
                     .setCancelText("Cancel")
                     .setCancelClickListener { sDialog ->
-                        sDialog.dismissWithAnimation()
+                        sDialog.dismissWithAnimation() // Dismiss dialog
                     }
                     .show()
             }
         })
     }
 
+    // Function to handle city search
     private fun SearchCity() {
-        val searchView = binding.searchView
+        val searchView = binding.searchView // Get reference to SearchView
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 if (query.isNullOrBlank()) {
-                    // Empty input
+                    // Empty input warning
                     FancyToast.makeText(
                         this@MainActivity,
                         "Please Enter A City Or Country Name",
@@ -109,9 +116,9 @@ class MainActivity : AppCompatActivity() {
                     ).show()
                 } else {
                     if (checkInternet()) {
-                        fetchWeatherData(query, true) // search action
+                        fetchWeatherData(query, true) // fetch weather for entered city
                     } else {
-                        showLastUpdatedData()
+                        showLastUpdatedData() // Show last data if no internet
                         FancyToast.makeText(
                             this@MainActivity,
                             "Network error, please check your internet connection",
@@ -125,25 +132,29 @@ class MainActivity : AppCompatActivity() {
                 return true
             }
 
-            override fun onQueryTextChange(newText: String?): Boolean = true
+            override fun onQueryTextChange(newText: String?): Boolean = true // Return true on text change
         })
     }
-    // Added extra param: isSearchAction
+    
+    // Function to fetch weather data from API
+    // Added extra param: isSearchAction to differentiate between default load and user search
     private fun fetchWeatherData(cityName: String, isSearchAction: Boolean = false) {
+        // Initialize Retrofit
         val retrofit = Retrofit.Builder()
             .addConverterFactory(GsonConverterFactory.create())
             .baseUrl("https://api.openweathermap.org/data/2.5/")
             .build().create(ApiInterface::class.java)
 
+        // Make API call
         val response = retrofit.getWeatherData(cityName, "b6e8352ce03216a9fd44c88e118a94c3", "metric")
         response.enqueue(object : Callback<WeatherApp> {
             @SuppressLint("SetTextI18n", "UseKtx")
             override fun onResponse(call: Call<WeatherApp?>, response: Response<WeatherApp?>) {
-                val responseBody = response.body()
+                val responseBody = response.body() // Get response body
                 if (response.isSuccessful && responseBody != null) {
-                    updateUI(cityName, responseBody)
+                    updateUI(cityName, responseBody) // Update UI with data
 
-                    // Save last response
+                    // Save last response to SharedPreferences
                     val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                     sharedPrefs.edit().putString(LAST_RESPONSE, Gson().toJson(responseBody)).apply()
                 } else {
@@ -179,42 +190,46 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    // Function to update the UI with weather data
     @SuppressLint("SetTextI18n")
     private fun updateUI(cityName: String, responseBody: WeatherApp) {
-        binding.temp.text = "${responseBody.main.temp} °C"
-        binding.windSpeed.text = "${responseBody.wind.speed} m/s"
-        binding.humidity.text = "${responseBody.main.humidity} %"
-        binding.sunrise.text = "${time(responseBody.sys.sunrise.toLong())} am"
-        binding.sunset.text = "${time(responseBody.sys.sunset.toLong())} pm"
-        binding.sea.text = "${responseBody.main.sea_level} hPa"
+        binding.temp.text = "${responseBody.main.temp} °C" // Set temperature
+        binding.windSpeed.text = "${responseBody.wind.speed} m/s" // Set wind speed
+        binding.humidity.text = "${responseBody.main.humidity} %" // Set humidity
+        binding.sunrise.text = "${time(responseBody.sys.sunrise.toLong())} am" // Set sunrise time
+        binding.sunset.text = "${time(responseBody.sys.sunset.toLong())} pm" // Set sunset time
+        binding.sea.text = "${responseBody.main.sea_level} hPa" // Set sea level pressure
 
-        val condition = responseBody.weather.firstOrNull()?.main ?: "unknown"
-        binding.conditions.text = condition
-        binding.maxTemp.text = "Max: ${responseBody.main.temp_max} °C"
-        binding.minTemp.text = "Min: ${responseBody.main.temp_min} °C"
-        binding.weather.text = condition
+        val condition = responseBody.weather.firstOrNull()?.main ?: "unknown" // Get weather condition
+        binding.conditions.text = condition // Set condition text
+        binding.maxTemp.text = "Max: ${responseBody.main.temp_max} °C" // Set max temp
+        binding.minTemp.text = "Min: ${responseBody.main.temp_min} °C" // Set min temp
+        binding.weather.text = condition // Set weather text
 
-        binding.day.text = dayName(System.currentTimeMillis())
-        binding.date.text = date()
-        binding.cityName.text = cityName
+        binding.day.text = dayName(System.currentTimeMillis()) // Set day name
+        binding.date.text = date() // Set date
+        binding.cityName.text = cityName // Set city name
 
-        changeImagesAccordingtoWeatherCondition(condition)
+        changeImagesAccordingtoWeatherCondition(condition) // Update images based on condition
     }
 
+    // Function to show last updated data from SharedPreferences
     private fun showLastUpdatedData() {
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val json = sharedPrefs.getString(LAST_RESPONSE, null)
+        val json = sharedPrefs.getString(LAST_RESPONSE, null) // Retrieve stored JSON
 
         if (json != null) {
-            val lastResponse = Gson().fromJson(json, WeatherApp::class.java)
-            updateUI(lastResponse.name ?: "Last City", lastResponse)
+            val lastResponse = Gson().fromJson(json, WeatherApp::class.java) // Parse JSON to object
+            updateUI(lastResponse.name ?: "Last City", lastResponse) // Update UI
         }
     }
+    
+    // Function to register network callback for connectivity changes
     private fun registerNetworkCallback() {
         networkCallback = object : ConnectivityManager.NetworkCallback() {
             override fun onAvailable(network: Network) {
                 if (!isConnected) {
-                    isConnected = true
+                    isConnected = true // Set connected flag
                     runOnUiThread {
                         FancyToast.makeText(
                             this@MainActivity,
@@ -224,7 +239,7 @@ class MainActivity : AppCompatActivity() {
                             R.drawable.white_cloud,
                             false
                         ).show()
-                        fetchWeatherData(binding.cityName.text.toString())
+                        fetchWeatherData(binding.cityName.text.toString()) // Refresh weather
                         FancyToast.makeText(
                             this@MainActivity,
                             "Weather updated",
@@ -237,9 +252,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             override fun onLost(network: Network) {
-                isConnected = false
+                isConnected = false // Set disconnected flag
                 runOnUiThread {
-                    showLastUpdatedData()
+                    showLastUpdatedData() // Show cached data
                     FancyToast.makeText(
                         this@MainActivity,
                         "Please connect to your internet",
@@ -251,9 +266,10 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
-        connectivityManager.registerDefaultNetworkCallback(networkCallback)
+        connectivityManager.registerDefaultNetworkCallback(networkCallback) // Register the callback
     }
 
+    // Function to check if internet is available
     private fun checkInternet(): Boolean {
         val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork)
         return capabilities != null &&
@@ -261,54 +277,59 @@ class MainActivity : AppCompatActivity() {
                         capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR))
     }
 
+    // Function to change background and animations based on weather condition
     private fun changeImagesAccordingtoWeatherCondition(conditions: String) {
         when (conditions) {
             "Clear Sky", "Sunny", "Clear" -> {
-                binding.root.setBackgroundResource(R.drawable.sunny_background)
-                binding.lottieAnimationView.setAnimation(R.raw.sun)
+                binding.root.setBackgroundResource(R.drawable.sunny_background) // Set sunny background
+                binding.lottieAnimationView.setAnimation(R.raw.sun) // Set sun animation
                 FancyToast.makeText(this, "Weather Is Sunny", FancyToast.LENGTH_SHORT, FancyToast.CONFUSING, R.drawable.sunny, false)
             }
             "Partly Clouds", "Clouds", "Overcast", "Mist", "Foggy", "Haze" -> {
-                binding.root.setBackgroundResource(R.drawable.colud_background)
-                binding.lottieAnimationView.setAnimation(R.raw.cloud)
+                binding.root.setBackgroundResource(R.drawable.colud_background) // Set cloudy background
+                binding.lottieAnimationView.setAnimation(R.raw.cloud) // Set cloud animation
                 FancyToast.makeText(this, "Weather Is Cloudy", FancyToast.LENGTH_SHORT, FancyToast.CONFUSING, R.drawable.cloud_black, false)
             }
             "Light Rain", "Drizzle", "Moderate Rain", "Showers", "Heavy Rain", "Rain" -> {
-                binding.root.setBackgroundResource(R.drawable.rain_background)
-                binding.lottieAnimationView.setAnimation(R.raw.rain)
+                binding.root.setBackgroundResource(R.drawable.rain_background) // Set rainy background
+                binding.lottieAnimationView.setAnimation(R.raw.rain) // Set rain animation
                 FancyToast.makeText(this, "Weather Is Rainy", FancyToast.LENGTH_SHORT, FancyToast.CONFUSING, R.drawable.rain, false)
             }
             "Light Snow", "Moderate Snow", "Heavy Snow", "Blizzard", "Snow" -> {
-                binding.root.setBackgroundResource(R.drawable.snow_background)
-                binding.lottieAnimationView.setAnimation(R.raw.snow)
+                binding.root.setBackgroundResource(R.drawable.snow_background) // Set snowy background
+                binding.lottieAnimationView.setAnimation(R.raw.snow) // Set snow animation
                 FancyToast.makeText(this, "Weather Is Snowy", FancyToast.LENGTH_SHORT, FancyToast.CONFUSING, R.drawable.snow, false)
             }
             else -> {
-                binding.root.setBackgroundResource(R.drawable.sunny_background)
-                binding.lottieAnimationView.setAnimation(R.raw.sun)
+                binding.root.setBackgroundResource(R.drawable.sunny_background) // Default to sunny background
+                binding.lottieAnimationView.setAnimation(R.raw.sun) // Default to sun animation
                 FancyToast.makeText(this, "Weather Is Sunny", FancyToast.LENGTH_SHORT, FancyToast.CONFUSING, R.drawable.sunny, false)
             }
         }
-        binding.lottieAnimationView.playAnimation()
+        binding.lottieAnimationView.playAnimation() // Play the animation
     }
 
+    // Function to get the day name from timestamp
     fun dayName(timeStamp: Long): String {
         val sdf = SimpleDateFormat("EEEE", Locale.getDefault())
         return sdf.format(Date())
     }
 
+    // Function to get current date formatted
     private fun date(): String {
         val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
         return sdf.format(Date())
     }
 
+    // Function to get time from timestamp
     private fun time(timeStamp: Long): String {
         val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
         return sdf.format(Date(timeStamp * 1000))
     }
 
+    // Called when the activity is destroyed
     override fun onDestroy() {
         super.onDestroy()
-        connectivityManager.unregisterNetworkCallback(networkCallback)
+        connectivityManager.unregisterNetworkCallback(networkCallback) // Unregister network callback
     }
 }

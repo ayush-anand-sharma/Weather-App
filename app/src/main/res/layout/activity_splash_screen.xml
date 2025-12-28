@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Root ConstraintLayout for the Splash Screen Activity -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,6 +9,7 @@
     android:background="@drawable/spalsh_screen"
     tools:context=".SplashScreen">
 
+    <!-- Image view for the app logo/cloud image -->
     <ImageView
         android:id="@+id/imageView"
         android:layout_width="211dp"
@@ -19,6 +21,7 @@
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription,ImageContrastCheck" />
 
+    <!-- Text view for the app tagline -->
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
@@ -35,6 +38,7 @@
         app:layout_constraintTop_toBottomOf="@+id/imageView"
         tools:ignore="HardcodedText" />
 
+    <!-- Text view for the credits/design attribution -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

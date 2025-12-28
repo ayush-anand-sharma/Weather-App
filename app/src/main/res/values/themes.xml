@@ -1,8 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Theme configuration for the Splash Screen API -->
     <style
         name="SplashApi" parent="Theme.SplashScreen">
+        <!-- Background color of the splash screen -->
         <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
+        <!-- Animated icon displayed on the splash screen -->
         <item name="windowSplashScreenAnimatedIcon">@raw/sun</item>
+        <!-- Theme to apply after the splash screen finishes -->
         <item name="postSplashScreenTheme">@style/Theme.AppCompat.DayNight.NoActionBar</item>
     </style>
 </resources>

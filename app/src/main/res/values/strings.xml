@@ -1,3 +1,4 @@
 <resources>
+    <!-- The name of the application displayed to the user -->
     <string name="app_name">Weather App</string>
 </resources>

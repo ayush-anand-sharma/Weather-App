@@ -1,23 +1,30 @@
+// Configuration block for plugin management
 pluginManagement {
+    // Define repositories for searching plugins
     repositories {
+        // Configure Google Maven repository
         google {
+            // Define content inclusion rules
             content {
-                includeGroupByRegex("com\\.android.*")
-                includeGroupByRegex("com\\.google.*")
-                includeGroupByRegex("androidx.*")
+                includeGroupByRegex("com\\.android.*") // Include Android plugins
+                includeGroupByRegex("com\\.google.*") // Include Google plugins
+                includeGroupByRegex("androidx.*") // Include AndroidX plugins
             }
         }
-        mavenCentral()
-        gradlePluginPortal()
-    }
-}
-dependencyResolutionManagement {
-    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories {
-        google()
-        mavenCentral()
+        mavenCentral() // Add Maven Central repository
+        gradlePluginPortal() // Add Gradle Plugin Portal
     }
 }
 
-rootProject.name = "Weather App"
-include(":app")
+// Configuration block for dependency resolution management
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS) // Enforce usage of declared repositories
+    // Define repositories for project dependencies
+    repositories {
+        google() // Add Google Maven repository
+        mavenCentral() // Add Maven Central repository
+    }
+}
+
+rootProject.name = "Weather App" // Set the name of the root project
+include(":app") // Include the app module in the build
