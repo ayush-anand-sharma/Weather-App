@@ -13,28 +13,41 @@
 
 package com.ayushcodes.weatherapp // Defines the package name for this file
 
-import android.annotation.SuppressLint // Imports SuppressLint annotation
-import android.content.Context // Imports Context class for accessing application environment
-import android.net.ConnectivityManager // Imports ConnectivityManager for checking network connection
-import android.net.Network // Imports Network class
-import android.net.NetworkCapabilities // Imports NetworkCapabilities for checking network capabilities
-import android.os.Bundle // Imports Bundle class for passing data between activities
-import android.widget.SearchView // Imports SearchView for search functionality
-import androidx.activity.OnBackPressedCallback // Imports OnBackPressedCallback for handling back button
-import androidx.activity.enableEdgeToEdge // Imports enableEdgeToEdge for full-screen display
-import androidx.appcompat.app.AppCompatActivity // Imports AppCompatActivity as the base class for activities
-import cn.pedant.SweetAlert.SweetAlertDialog // Imports SweetAlertDialog for custom alert dialogs
-import com.ayushcodes.weatherapp.databinding.ActivityMainBinding // Imports ViewBinding class for main activity layout
-import com.google.gson.Gson // Imports Gson for JSON parsing
-import com.shashank.sony.fancytoastlib.FancyToast // Imports FancyToast for custom toast messages
-import retrofit2.Call // Imports Call class from Retrofit
-import retrofit2.Callback // Imports Callback interface from Retrofit
-import retrofit2.Response // Imports Response class from Retrofit
-import retrofit2.Retrofit // Imports Retrofit class
-import retrofit2.converter.gson.GsonConverterFactory // Imports GsonConverterFactory for Retrofit
-import java.text.SimpleDateFormat // Imports SimpleDateFormat for formatting dates
-import java.util.Date // Imports Date class
-import java.util.Locale // Imports Locale class
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.os.Build
+import android.os.Bundle
+import android.os.Looper
+import android.widget.SearchView
+import androidx.activity.OnBackPressedCallback
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import cn.pedant.SweetAlert.SweetAlertDialog
+import com.ayushcodes.weatherapp.databinding.ActivityMainBinding
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import com.google.gson.Gson
+import com.shashank.sony.fancytoastlib.FancyToast
+import retrofit2.Call
+import retrofit2.Callback
+import retrofit2.Response
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Suppress("USELESS_ELVIS") // Suppresses lint warning for useless elvis operator
 // Main Activity class where the app logic resides
@@ -51,6 +64,10 @@ class MainActivity : AppCompatActivity() {
 
     private val PREFS_NAME = "WeatherPrefs" // Name for SharedPreferences file
     private val LAST_RESPONSE = "LastWeatherResponse" // Key for storing last weather response
+    private val LAST_CITY = "LastCity" // Key for storing last city name
+
+    private lateinit var fusedLocationClient: FusedLocationProviderClient // Client for accessing location API
+    private lateinit var locationCallback: LocationCallback // Callback for receiving location updates
 
     // Called when the activity is first created
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,24 +75,14 @@ class MainActivity : AppCompatActivity() {
         enableEdgeToEdge() // Enable edge-to-edge display
         setContentView(binding.root) // Set the content view to the root of the binding
 
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this) // Initialize FusedLocationProviderClient
         connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager // Initialize ConnectivityManager
 
         registerNetworkCallback() // Register network callback to monitor connection changes
 
-        // Check if internet is available
-        if (checkInternet()) {
-            fetchWeatherData("Jaipur") // Fetch weather data for default city Jaipur
-        } else {
-            showLastUpdatedData() // Show last saved data if no internet
-            FancyToast.makeText(
-                this,
-                "Network error, please check your internet connection",
-                FancyToast.LENGTH_LONG,
-                FancyToast.ERROR,
-                R.drawable.white_cloud,
-                false
-            ).show() // Show error toast
-        }
+        // Check for location permission and internet on startup
+        checkLocationPermission()
+
         SearchCity() // Initialize search functionality
 
         // Handle back button press
@@ -97,6 +104,159 @@ class MainActivity : AppCompatActivity() {
                     .show()
             }
         })
+    }
+
+    // Function to check and request location permissions
+    private fun checkLocationPermission() {
+        if (ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Permission not granted, show alert dialog explaining why it's needed
+            SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE)
+                .setTitleText("Location Permission Needed")
+                .setContentText("Allow location access to show weather for your current location.")
+                .setConfirmText("Allow")
+                .setConfirmClickListener { sDialog ->
+                    sDialog.dismissWithAnimation()
+                    // Request permissions
+                    locationPermissionRequest.launch(
+                        arrayOf(
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                        )
+                    )
+                }
+                .setCancelText("Deny")
+                .setCancelClickListener { sDialog ->
+                    sDialog.dismissWithAnimation()
+                    // Permission denied, handle accordingly (e.g., show default city)
+                    handlePermissionDenied()
+                }
+                .show()
+        } else {
+            // Permission already granted, proceed to get location
+            getCurrentLocation()
+        }
+    }
+
+    // Permission request launcher
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
+                // Precise location access granted.
+                getCurrentLocation()
+            }
+            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
+                // Only approximate location access granted.
+                getCurrentLocation()
+            }
+            else -> {
+                // No location access granted.
+                handlePermissionDenied()
+            }
+        }
+    }
+
+    // Handle case where location permission is denied
+    private fun handlePermissionDenied() {
+        if (checkInternet()) {
+             fetchWeatherData("India") // Fetch weather for India as fallback
+        } else {
+             showLastUpdatedData() // Show last updated data if offline
+             // Display toast for internet connection
+             FancyToast.makeText(
+                this,
+                "Please check your internet connection",
+                FancyToast.LENGTH_LONG,
+                FancyToast.WARNING,
+                R.drawable.white_cloud,
+                false
+            ).show()
+        }
+    }
+
+    // Function to get current location
+    @SuppressLint("MissingPermission")
+    private fun getCurrentLocation() {
+        if (checkInternet()) {
+            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 10000).build()
+
+            locationCallback = object : LocationCallback() {
+                override fun onLocationResult(locationResult: LocationResult) {
+                     fusedLocationClient.removeLocationUpdates(this) // Stop updates after getting one
+                     for (location in locationResult.locations) {
+                         // Geocoding can block the main thread, so run it on a background thread
+                         // but only for older APIs. For API 33+, we can use the async method.
+                         
+                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                             val geoCoder = Geocoder(this@MainActivity, Locale.getDefault())
+                             geoCoder.getFromLocation(location.latitude, location.longitude, 1) { addresses ->
+                                 if (addresses.isNotEmpty()) {
+                                     val cityName = addresses[0].locality ?: addresses[0].adminArea
+                                     runOnUiThread {
+                                         fetchWeatherData(cityName ?: "India")
+                                     }
+                                 } else {
+                                     runOnUiThread {
+                                         fetchWeatherData("India")
+                                     }
+                                 }
+                             }
+                         } else {
+                             // For older devices, do it in a thread
+                             Thread {
+                                 // Get city name from coordinates
+                                 val cityName = getCityName(location.latitude, location.longitude)
+                                 
+                                 // Switch back to Main Thread to update UI/Fetch Data
+                                 runOnUiThread {
+                                     if (cityName != null) {
+                                         fetchWeatherData(cityName) // Fetch weather for current location
+                                     } else {
+                                         fetchWeatherData("India") // Fallback if city not found
+                                     }
+                                 }
+                             }.start()
+                         }
+                         return 
+                     }
+                }
+            }
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+        } else {
+            showLastUpdatedData() // Show last updated data if offline
+             // Display toast for internet connection
+             FancyToast.makeText(
+                this,
+                "Please check your internet connection",
+                FancyToast.LENGTH_LONG,
+                FancyToast.WARNING,
+                R.drawable.white_cloud,
+                false
+            ).show()
+        }
+    }
+
+    // Function to get city name from coordinates using Geocoder (Deprecated for API 33+, used for fallback)
+    private fun getCityName(lat: Double, long: Double): String? {
+        val geoCoder = Geocoder(this, Locale.getDefault())
+        try {
+            @Suppress("DEPRECATION")
+            val address = geoCoder.getFromLocation(lat, long, 1)
+            if (!address.isNullOrEmpty()) {
+                return address[0].locality ?: address[0].adminArea // Return locality or admin area
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return null
     }
 
     // Function to handle city search
@@ -154,9 +314,13 @@ class MainActivity : AppCompatActivity() {
                 if (response.isSuccessful && responseBody != null) {
                     updateUI(cityName, responseBody) // Update UI with data
 
-                    // Save last response to SharedPreferences
+                    // Save last response and city to SharedPreferences
                     val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                    sharedPrefs.edit().putString(LAST_RESPONSE, Gson().toJson(responseBody)).apply()
+                    val editor = sharedPrefs.edit()
+                    editor.putString(LAST_RESPONSE, Gson().toJson(responseBody))
+                    editor.putString(LAST_CITY, cityName)
+                    editor.apply()
+
                 } else {
                     // Only show "Doesn't exist" if this was triggered by search
                     if (isSearchAction) {
@@ -226,10 +390,11 @@ class MainActivity : AppCompatActivity() {
     private fun showLastUpdatedData() {
         val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
         val json = sharedPrefs.getString(LAST_RESPONSE, null) // Retrieve stored JSON
+        val lastCity = sharedPrefs.getString(LAST_CITY, "India") // Retrieve stored city, default India
 
         if (json != null) {
             val lastResponse = Gson().fromJson(json, WeatherApp::class.java) // Parse JSON to object
-            updateUI(lastResponse.name ?: "Last City", lastResponse) // Update UI
+            updateUI(lastResponse.name ?: lastCity ?: "Last City", lastResponse) // Update UI
         }
     }
     
@@ -242,21 +407,29 @@ class MainActivity : AppCompatActivity() {
                     runOnUiThread {
                         FancyToast.makeText(
                             this@MainActivity,
-                            "Updating weather...",
-                            FancyToast.LENGTH_SHORT,
-                            FancyToast.CONFUSING,
-                            R.drawable.white_cloud,
-                            false
-                        ).show()
-                        fetchWeatherData(binding.cityName.text.toString()) // Refresh weather
-                        FancyToast.makeText(
-                            this@MainActivity,
-                            "Weather updated",
+                            "Feed Updated.", // Display "Feed Updated" toast as requested
                             FancyToast.LENGTH_SHORT,
                             FancyToast.SUCCESS,
                             R.drawable.white_cloud,
                             false
                         ).show()
+                        
+                        // If location permission is granted, try to refresh current location weather
+                        // Otherwise, refresh last known city
+                         if (ActivityCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_FINE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
+                                this@MainActivity,
+                                Manifest.permission.ACCESS_COARSE_LOCATION
+                            ) == PackageManager.PERMISSION_GRANTED
+                        ) {
+                            getCurrentLocation()
+                        } else {
+                            val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                            val lastCity = sharedPrefs.getString(LAST_CITY, "India")
+                            fetchWeatherData(lastCity ?: "India") // Refresh weather for last known city or India
+                        }
                     }
                 }
             }
@@ -266,7 +439,7 @@ class MainActivity : AppCompatActivity() {
                     showLastUpdatedData() // Show cached data
                     FancyToast.makeText(
                         this@MainActivity,
-                        "Please connect to your internet",
+                        "Please check your internet connection",
                         FancyToast.LENGTH_LONG,
                         FancyToast.WARNING,
                         R.drawable.white_cloud,
