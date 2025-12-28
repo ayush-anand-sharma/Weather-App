@@ -1,8 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Resource file for defining color values -->
 <resources>
-    <!-- Standard black color -->
+    <!-- Standard colors that flip in night mode -->
     <color name="black">#FF000000</color>
-    <!-- Standard white color -->
     <color name="white">#FFFFFFFF</color>
+    
+    <!-- Fixed colors -->
+    <color name="fixed_white">#FFFFFFFF</color>
+    <color name="fixed_black">#FF000000</color>
+    
+    <!-- Themed colors -->
+    <color name="text_primary">#FF000000</color>
+    <color name="text_secondary">#FF333333</color>
+    <color name="container_bg">#40FFFFFF</color>
+    <color name="container_stroke">#FFFFFFFF</color>
+    <color name="search_bg">#80000000</color>
+    <color name="background_overlay">#00000000</color>
+    <color name="icon_tint">#FF000000</color>
 </resources>

@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Root ConstraintLayout for the Splash Screen Activity -->
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
@@ -7,46 +6,59 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/spalsh_screen"
-    tools:context=".SplashScreen">
+    tools:context=".SplashScreen"
+    tools:ignore="All">
 
-    <!-- Image view for the app logo/cloud image -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/background_overlay" />
+
+    <androidx.constraintlayout.widget.Guideline
+        android:id="@+id/guideline_h_center"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        app:layout_constraintGuide_percent="0.5" />
+
     <ImageView
         android:id="@+id/imageView"
-        android:layout_width="211dp"
-        android:layout_height="140dp"
-        android:layout_marginTop="283dp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="32dp"
+        android:adjustViewBounds="true"
+        android:maxWidth="250dp"
+        android:maxHeight="200dp"
         android:src="@drawable/white_cloud"
+        app:layout_constraintBottom_toTopOf="@+id/guideline_h_center"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:ignore="ContentDescription,ImageContrastCheck" />
+        tools:ignore="ContentDescription" />
 
-    <!-- Text view for the app tagline -->
     <TextView
         android:id="@+id/textView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="67dp"
+        android:layout_marginTop="32dp"
         android:fontFamily="@font/merriweathersans_bold"
         android:text="Weather Matters, \nWe've Got The Details"
         android:textAlignment="center"
-        android:textColor="@color/white"
-        android:textSize="25sp"
-        app:layout_constraintEnd_toEndOf="@+id/imageView"
-        app:layout_constraintHorizontal_bias="0.498"
-        app:layout_constraintStart_toStartOf="@+id/imageView"
-        app:layout_constraintTop_toBottomOf="@+id/imageView"
+        android:textColor="@color/fixed_white"
+        android:textSize="24sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/guideline_h_center"
         tools:ignore="HardcodedText" />
 
-    <!-- Text view for the credits/design attribution -->
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="50dp"
+        android:layout_marginBottom="32dp"
         android:fontFamily="@font/merriweathersans_medium"
         android:text="DESIGN BY \nAYUSH"
         android:textAlignment="center"
-        android:textColor="@color/white"
+        android:textColor="@color/fixed_white"
+        android:textSize="12sp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"

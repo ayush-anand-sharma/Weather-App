@@ -1,3 +1,4 @@
+@file:Suppress("ALL")
 // MY API KEY:- b6e8352ce03216a9fd44c88e118a94c3
 
 // BELOW IS JAIPUR'S WEATHER CODE...
@@ -49,7 +50,6 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-@Suppress("USELESS_ELVIS") // Suppresses lint warning for useless elvis operator
 // Main Activity class where the app logic resides
 class MainActivity : AppCompatActivity() {
 

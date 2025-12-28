@@ -1,12 +1,24 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Base application theme for night mode. -->
-    <style
-        name="SplashApi" parent="Theme.SplashScreen">
-        <!-- Background color of the splash screen -->
+    <style name="Base.Theme.WeatherApp" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your dark theme here. -->
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="Theme.WeatherApp" parent="Base.Theme.WeatherApp" />
+    
+    <style name="SplashApi" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/ic_launcher_background</item>
-        <!-- Animated icon displayed on the splash screen -->
         <item name="windowSplashScreenAnimatedIcon">@raw/sun</item>
-        <!-- Theme to apply after the splash screen finishes -->
-        <item name="postSplashScreenTheme">@style/Theme.AppCompat.DayNight.NoActionBar</item>
+        <item name="postSplashScreenTheme">@style/Theme.WeatherApp</item>
+    </style>
+    
+    <style name="SearchViewTheme" parent="Widget.AppCompat.SearchView">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_secondary</item>
+        <item name="queryBackground">@color/background_overlay</item>
+        <item name="submitBackground">@color/background_overlay</item>
+        <item name="searchIcon">@drawable/search</item>
+        <item name="closeIcon">@drawable/search</item>
     </style>
 </resources>
