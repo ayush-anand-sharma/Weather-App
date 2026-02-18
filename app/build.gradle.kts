@@ -1,7 +1,6 @@
 // Block to apply plugins to the project
 plugins {
     alias(libs.plugins.android.application) // Apply the Android Application plugin
-    alias(libs.plugins.kotlin.android) // Apply the Kotlin Android plugin
 }
 
 // Configuration block for Android build settings
@@ -41,12 +40,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11 // Set Java source compatibility to 11
         targetCompatibility = JavaVersion.VERSION_11 // Set Java target compatibility to 11
     }
-}
-
-// Kotlin compiler options
-kotlin {
-    compilerOptions {
-        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11) // Set the JVM target version to 11
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        }
     }
 }
 

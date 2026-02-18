@@ -15,6 +15,9 @@ pluginManagement {
         gradlePluginPortal() // Add Gradle Plugin Portal
     }
 }
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
+}
 
 // Configuration block for dependency resolution management
 dependencyResolutionManagement {
