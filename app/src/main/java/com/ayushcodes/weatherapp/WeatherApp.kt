@@ -1,18 +1,21 @@
-package com.ayushcodes.weatherapp // Defines the package name for this file
+package com.ayushcodes.weatherapp // Defines the package name for the application
 
-// Data class representing the complete weather API response
+// DATA CLASS FOR WEATHER APP
+
+// This data class represents the main response from the OpenWeatherMap API.
+// It contains all the weather data for a specific location.
 data class WeatherApp(
-    val base: String?, // Internal parameter
-    val clouds: Clouds?, // Object containing cloud information
-    val cod: Int?, // Internal parameter
-    val coord: Coord?, // Object containing geographic coordinates
-    val dt: Int?, // Time of data calculation, unix, UTC
-    val id: Int?, // City ID
-    val main: Main?, // Object containing main weather data
-    val name: String?, // City name
-    val sys: Sys?, // Object containing system data (country, sunrise, sunset)
-    val timezone: Int?, // Shift in seconds from UTC
-    val visibility: Int?, // Visibility, meter
-    val weather: List<Weather>?, // List of weather condition objects
-    val wind: Wind? // Object containing wind information
-)
+    val base: String, // The base station that provided the weather data
+    val clouds: Clouds, // The cloud data
+    val cod: Int, // The response code
+    val coord: Coord, // The geographic coordinates
+    val dt: Int, // The date and time of the weather data
+    val id: Int, // The location ID
+    val main: Main, // The main weather data
+    val name: String, // The name of the location
+    val sys: Sys, // The system data
+    val timezone: Int, // The timezone of the location
+    val visibility: Int, // The visibility in meters
+    val weather: List<Weather>, // A list of weather conditions
+    val wind: Wind // The wind data
+) // A data class that represents the main response from the OpenWeatherMap API

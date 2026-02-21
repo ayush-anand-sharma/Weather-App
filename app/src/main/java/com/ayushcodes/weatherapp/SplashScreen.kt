@@ -10,15 +10,15 @@ import androidx.appcompat.app.AppCompatActivity // Imports AppCompatActivity as 
 
 @SuppressLint("CustomSplashScreen") // Suppresses lint warning for custom splash screen
 // Activity class for the splash screen displayed on app startup
-class SplashScreen : AppCompatActivity() {
+class SplashScreen : AppCompatActivity() { // The SplashScreen activity
     // Called when the activity is first created
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) { // The onCreate method is called when the activity is first created
         super.onCreate(savedInstanceState) // Call the superclass implementation
         enableEdgeToEdge() // Enable edge-to-edge display for immersive experience
         setContentView(R.layout.activity_splash_screen) // Set the content view to the splash screen layout
         
         // Use a Handler to delay the transition to the main activity
-        Handler(Looper.getMainLooper()).postDelayed({
+        Handler(Looper.getMainLooper()).postDelayed({ // Creates a new Handler on the main looper and posts a delayed task
             val intent = Intent(this, MainActivity::class.java) // Create an intent to start MainActivity
             startActivity(intent) // Start the MainActivity
             finish() // Finish the SplashScreen activity so the user cannot go back to it

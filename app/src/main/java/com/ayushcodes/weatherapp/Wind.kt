@@ -1,8 +1,9 @@
-package com.ayushcodes.weatherapp // Defines the package name for this file
+package com.ayushcodes.weatherapp // Defines the package name for the application
 
-// Data class representing wind conditions
+// DATA CLASS FOR WIND
+
+// This data class represents the wind data from the OpenWeatherMap API.
+// It contains information about the wind speed.
 data class Wind(
-    val deg: Int?, // Wind direction in degrees
-    val gust: Double?, // Wind gust speed
-    val speed: Double? // Wind speed
-)
+    val speed: Double // The wind speed
+) // A data class that represents the wind data from the OpenWeatherMap API

@@ -70,7 +70,7 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
 
     // FLAGS
     private var permissionAskedOnce = false // Flag to prevent repeated permission dialogs
-    private var locationDialogShown = false // Flag to prevent repeated enable-location dialogs
+    private var locationDialogShown = false // Flag to prevent the location settings dialog from appearing multiple times.
 
     // SUGGESTIONS ADAPTER
     private lateinit var suggestionsAdapter: SuggestionsAdapter // Adapter for the search suggestions
@@ -96,15 +96,12 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
         binding.suggestionsRecyclerView.adapter = suggestionsAdapter // Sets the adapter for the suggestions recycler view
 
         // LAUNCHER FOR LOCATION SETTINGS
+        // This launcher handles the result of returning from the device's location settings screen.
         locationSettingsLauncher =
-            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result -> // Registers a launcher for the location settings activity
-                locationDialogShown = false // Resets the location dialog shown flag
-                if (result.resultCode == Activity.RESULT_OK) { // Checks if the result is OK
-                    startLocationFlow() // Retries the location flow
-                } else { // If the result is not OK
-                    showLastUpdatedData() // Shows the last updated data
-                    loadingView.visibility = View.GONE // Hides the loading view
-                }
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+                locationDialogShown = false // Reset the flag, since the user has returned from the settings screen.
+                loadingView.visibility = View.VISIBLE // Show the progress bar while we re-check for location.
+                startLocationFlow() // Restart the location flow to get the updated status.
             }
 
         registerNetworkCallback() // Registers a network callback to listen for network changes
@@ -118,37 +115,42 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
         if (checkInternet()) { // Checks if the device is connected to the internet
             startLocationFlow() // Starts the location flow
         } else { // If there is no internet connection
-            loadingView.visibility = View.GONE // Hides the loading view
-            FancyToast.makeText(this,"Please check your internet connection.",FancyToast.LENGTH_LONG,FancyToast.WARNING,R.drawable.white_cloud,false).show() // Shows a warning toast
-            showLastUpdatedData() // Shows the last updated weather data
+            FancyToast.makeText(this, "Please check your internet connection.", FancyToast.LENGTH_LONG, FancyToast.WARNING, R.drawable.white_cloud, false).show() // Shows a warning toast
+            if (!showLastUpdatedData()) { // If there is no last updated data to show
+                loadingView.visibility = View.GONE // Hide the loading view as there is nothing to load
+            }
         }
     }
 
     // ON RESUME
     override fun onResume() { // Called when the activity will start interacting with the user
         super.onResume() // Calls the parent class's onResume method
-        // DO NOTHING HERE — prevents multiple dialogs
+        // The logic to handle returning from settings is now correctly in the locationSettingsLauncher.
+        // No special logic is needed here to prevent the dialog from showing multiple times.
     }
 
     // LOCATION FLOW CONTROLLER
     private fun startLocationFlow() { // Controls the flow of obtaining the user's location
-
-        if (!checkInternet()) return // Stops the flow if there is no internet connection
+        if (!checkInternet()) { // If there is no internet
+            if (!showLastUpdatedData()) { // And if there is no last data to show
+                loadingView.visibility = View.GONE // Hide the progress bar
+            }
+            return // Stop the flow
+        }
 
         // CHECK PERMISSION
-        if (ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || // Checks if fine location permission is granted
-            ActivityCompat.checkSelfPermission(this,Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) { // Checks if coarse location permission is granted
-
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || // Checks if fine location permission is granted
+            ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        ) { // Checks if coarse location permission is granted
             checkLocationEnabled() // Checks if location is enabled
-
         } else { // If permission is not granted
-
             if (!permissionAskedOnce) { // Checks if permission has been asked before
                 permissionAskedOnce = true // Sets the flag to true
-                locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION)) // Launches the permission request
-            } else { // If permission has been asked before
-                showLastUpdatedData() // Shows the last updated data
-                loadingView.visibility = View.GONE // Hides the loading view
+                locationPermissionRequest.launch(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)) // Launches the permission request
+            } else { // If permission has been asked before and was denied
+                if (!showLastUpdatedData()) { // Try to show last data
+                    fetchWeatherData("India") // If there is no last data (fresh install), fetch for default
+                }
             }
         }
     }
@@ -156,33 +158,31 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
     // PERMISSION RESULT
     private val locationPermissionRequest = // A launcher for the location permission request
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions -> // Registers a launcher for multiple permissions
-
             val granted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true || // Checks if fine location permission is granted
                     permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true // Checks if coarse location permission is granted
 
             if (granted) { // If permission is granted
                 checkLocationEnabled() // Checks if location is enabled
             } else { // If permission is not granted
-                showLastUpdatedData() // Shows the last updated data
-                loadingView.visibility = View.GONE // Hides the loading view
+                if (!showLastUpdatedData()) { // Try to show last data
+                    fetchWeatherData("India") // If there is no last data (fresh install), fetch for default
+                }
             }
         }
 
     // CHECK IF GPS IS ON
     private fun checkLocationEnabled() { // Checks if the location services are enabled on the device
-
         val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager // Initializes the location manager
-
         val enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || // Checks if GPS provider is enabled
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER) // Checks if network provider is enabled
 
         if (enabled) { // If location is enabled
             getCurrentLocation() // Gets the current location
         } else { // If location is not enabled
-            if (locationDialogShown) return // Prevents repeated dialogs
-            locationDialogShown = true // Sets the flag to true
+            if (locationDialogShown) return // This is the crucial check. If the dialog is already showing, do not show another one.
+            locationDialogShown = true // Set the flag to true because we are about to show the dialog.
 
-            SweetAlertDialog(this,SweetAlertDialog.WARNING_TYPE) // Shows a warning dialog
+            SweetAlertDialog(this, SweetAlertDialog.WARNING_TYPE) // Shows a warning dialog
                 .setTitleText("Enable Location") // Sets the title of the dialog
                 .setContentText("Please enable location services.") // Sets the content of the dialog
                 .setConfirmText("Enable") // Sets the confirm button text
@@ -194,8 +194,10 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
                 .setCancelText("Cancel") // Sets the cancel button text
                 .setCancelClickListener { // Sets the cancel button click listener
                     it.dismissWithAnimation() // Dismisses the dialog with an animation
-                    showLastUpdatedData() // Shows the last updated data
-                    loadingView.visibility = View.GONE // Hides the loading view
+                    locationDialogShown = false // IMPORTANT: Reset the flag on cancellation.
+                    if (!showLastUpdatedData()) { // Try to show last data
+                        fetchWeatherData("India") // If there is no last data (fresh install), fetch for default
+                    }
                 }
                 .show() // Shows the dialog
         }
@@ -204,74 +206,83 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
     // GET LOCATION
     @SuppressLint("MissingPermission") // Suppresses the missing permission warning
     private fun getCurrentLocation() { // Gets the user's current location
-
-        if (!checkInternet()) { // Checks for internet connection
-            showLastUpdatedData() // Shows last updated data if offline
-            FancyToast.makeText(this,"Please check your internet connection",FancyToast.LENGTH_LONG,FancyToast.WARNING,R.drawable.white_cloud,false).show() // Shows a warning toast
-            loadingView.visibility = View.GONE // Hides the loading view
-            return // Exits the function
-        }
-
-        fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY,null) // Gets the current location with high accuracy
+        fusedLocationProviderClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null) // Gets the current location with high accuracy
             .addOnSuccessListener { location: Location? -> // Adds a success listener
-
                 if (location != null) { // If the location is not null
-
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) { // Checks the Android version
-
-                        val geoCoder = Geocoder(this,Locale.getDefault()) // Initializes the geocoder
-                        geoCoder.getFromLocation(location.latitude,location.longitude,1){ addresses -> // Gets the address from the location
-                            val cityName = if(addresses.isNotEmpty()) // Checks if the address list is not empty
+                        val geoCoder = Geocoder(this, Locale.getDefault()) // Initializes the geocoder
+                        geoCoder.getFromLocation(location.latitude, location.longitude, 1) { addresses -> // Gets the address from the location
+                            val cityName = if (addresses.isNotEmpty()) // Checks if the address list is not empty
                                 addresses[0].locality ?: addresses[0].adminArea // Gets the city name
-                            else "India" // Sets a default city name
+                            else null // Set to null if no city name found
 
-                            runOnUiThread { fetchWeatherData(cityName ?: "India") } // Fetches the weather data on the main thread
+                            if (cityName != null) { // If a city name was found
+                                runOnUiThread { fetchWeatherData(cityName) } // Fetches the weather data on the main thread
+                            } else { // If no city name was found from coordinates
+                                if (!showLastUpdatedData()) { // Try to show last data
+                                    FancyToast.makeText(this, "Unable to retrieve current location.", FancyToast.LENGTH_LONG, FancyToast.WARNING, R.drawable.white_cloud, false).show() // Show a toast if location is not retrieved
+                                }
+                                loadingView.visibility = View.GONE // Hide the loading view
+                            }
                         }
-
                     } else { // If the Android version is lower than Tiramisu
-
                         Thread { // Creates a new thread
-                            val cityName = getCityName(location.latitude,location.longitude) // Gets the city name
-                            runOnUiThread { fetchWeatherData(cityName ?: "India") } // Fetches the weather data on the main thread
+                            val cityName = getCityName(location.latitude, location.longitude) // Gets the city name
+                            runOnUiThread { // Switch back to the main thread
+                                if (cityName != null) { // If a city name was found
+                                    fetchWeatherData(cityName) // Fetch the weather data for the found city
+                                } else { // If a city name was not found
+                                    if (!showLastUpdatedData()) { // Try to show last data
+                                        FancyToast.makeText(this, "Unable to retrieve current location.", FancyToast.LENGTH_LONG, FancyToast.WARNING, R.drawable.white_cloud, false).show() // Show a toast if location is not retrieved
+                                    }
+                                    loadingView.visibility = View.GONE // Hide the loading view
+                                }
+                            }
                         }.start() // Starts the thread
                     }
-
-                } else fetchWeatherData("India") // Fetches weather data for a default city
+                } else { // This block is executed if location is null, meaning location could not be fetched.
+                    if (!showLastUpdatedData()) { // Try to show last known weather.
+                        // If there is no last known weather (e.g., on a fresh install), show a toast and stop loading.
+                        // This prevents the app from incorrectly defaulting to "India".
+                        FancyToast.makeText(this, "Unable to retrieve current location.", FancyToast.LENGTH_LONG, FancyToast.WARNING, R.drawable.white_cloud, false).show() // Show a toast if location is not retrieved
+                    }
+                    loadingView.visibility = View.GONE // Hide the loading view
+                }
             }
     }
 
     // GET CITY NAME
-    private fun getCityName(lat:Double,long:Double):String?{ // Gets the city name from latitude and longitude
-        val geoCoder=Geocoder(this,Locale.getDefault()) // Initializes the geocoder
-        return try{ // Tries to get the address
-            val address=geoCoder.getFromLocation(lat,long,1) // Gets the address from the location
+    private fun getCityName(lat: Double, long: Double): String? { // Gets the city name from latitude and longitude
+        val geoCoder = Geocoder(this, Locale.getDefault()) // Initializes the geocoder
+        return try { // Tries to get the address
+            val address = geoCoder.getFromLocation(lat, long, 1) // Gets the address from the location
             address?.firstOrNull()?.locality ?: address?.firstOrNull()?.adminArea // Returns the city name
-        }catch(e:Exception){ null } // Returns null if an exception occurs
+        } catch (e: Exception) { // Catches any exception that might occur
+            null // Returns null if an exception occurs
+        } // Returns null if an exception occurs
     }
 
     // SEARCH
-    private fun SearchCity(){ // Initializes the search functionality
-        val searchView=binding.searchView // Gets the search view from the binding
-        searchView.setOnQueryTextListener(object:SearchView.OnQueryTextListener{ // Sets a query text listener
+    private fun SearchCity() { // Initializes the search functionality
+        val searchView = binding.searchView // Gets the search view from the binding
+        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener { // Sets a query text listener
 
-            override fun onQueryTextSubmit(query:String?):Boolean{ // Called when the user submits the query
-
-                if(query.isNullOrBlank()){ // Checks if the query is null or blank
-                    FancyToast.makeText(this@MainActivity,"Please Enter A City Or Country Name",FancyToast.LENGTH_SHORT,FancyToast.WARNING,R.drawable.white_cloud,false).show()
-                }else{ // If the query is not null or blank
-                    if(checkInternet()) { // Checks for internet connection
+            override fun onQueryTextSubmit(query: String?): Boolean { // Called when the user submits the query
+                if (query.isNullOrBlank()) { // Checks if the query is null or blank
+                    FancyToast.makeText(this@MainActivity, "Please Enter A City Or Country Name", FancyToast.LENGTH_SHORT, FancyToast.WARNING, R.drawable.white_cloud, false).show() // Show a warning toast if the query is blank
+                } else { // If the query is not null or blank
+                    if (checkInternet()) { // Checks for internet connection
                         loadingView.visibility = View.VISIBLE // Shows the loading view
-                        fetchWeatherData(query,true) // Fetches the weather data for the searched city
-                    }
-                    else{ // If there is no internet connection
+                        fetchWeatherData(query, true) // Fetches the weather data for the searched city
+                    } else { // If there is no internet connection
                         showLastUpdatedData() // Shows the last updated data
-                        FancyToast.makeText(this@MainActivity,"Network error, please check your internet connection",FancyToast.LENGTH_SHORT,FancyToast.ERROR,R.drawable.white_cloud,false).show() // Shows an error toast
+                        FancyToast.makeText(this@MainActivity, "Network error, please check your internet connection", FancyToast.LENGTH_SHORT, FancyToast.ERROR, R.drawable.white_cloud, false).show() // Shows an error toast
                     }
                 }
                 return true // Returns true to indicate that the query has been handled
             }
 
-            override fun onQueryTextChange(newText:String?):Boolean { // Called when the query text changes
+            override fun onQueryTextChange(newText: String?): Boolean { // Called when the query text changes
                 if (newText.isNullOrBlank()) { // Checks if the new text is null or blank
                     binding.suggestionsRecyclerView.visibility = View.GONE // Hides the suggestions recycler view
                 } else { // If the new text is not null or blank
@@ -307,7 +318,7 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
             }
 
             override fun onFailure(call: Call<GeoCodingResponse>, t: Throwable) { // Called when the request fails
-                // Handle failure
+                // You could log the error or show a toast to the user. For now, we do nothing.
             }
         })
     }
@@ -315,107 +326,111 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
     // RETROFIT API
     // This function uses the ApiInterface to fetch weather data from the OpenWeatherMap API.
     // The ApiInterface was created to define the API endpoints for the OpenWeatherMap API.
-    private fun fetchWeatherData(cityName:String,isSearchAction:Boolean=false){ // Fetches weather data from the API
+    private fun fetchWeatherData(cityName: String, isSearchAction: Boolean = false) { // Fetches weather data from the API
 
-        val retrofit=Retrofit.Builder() // Creates a new Retrofit builder
+        val retrofit = Retrofit.Builder() // Creates a new Retrofit builder
             .addConverterFactory(GsonConverterFactory.create()) // Adds a GSON converter factory
             .baseUrl("https://api.openweathermap.org/data/2.5/") // Sets the base URL of the API
             .build().create(ApiInterface::class.java) // Creates an instance of the API interface
 
-        val response=retrofit.getWeatherData(cityName,"b6e8352ce03216a9fd44c88e118a94c3","metric") // Gets the weather data for the specified city
+        val response = retrofit.getWeatherData(cityName, "b6e8352ce03216a9fd44c88e118a94c3", "metric") // Gets the weather data for the specified city
 
-        response.enqueue(object:Callback<WeatherApp> { // Enqueues the request
+        response.enqueue(object : Callback<WeatherApp> { // Enqueues the request
 
-            override fun onResponse(call:Call<WeatherApp?>,response:Response<WeatherApp?>){ // Called when a response is received
+            override fun onResponse(call: Call<WeatherApp?>, response: Response<WeatherApp?>) { // Called when a response is received
                 loadingView.visibility = View.GONE // Hides the loading view
-                val responseBody=response.body() // Gets the response body
+                val responseBody = response.body() // Gets the response body
 
-                if(response.isSuccessful && responseBody!=null){ // Checks if the response is successful and the body is not null
+                if (response.isSuccessful && responseBody != null) { // Checks if the response is successful and the body is not null
 
-                    updateUI(cityName,responseBody) // Updates the UI with the new data
+                    updateUI(cityName, responseBody) // Updates the UI with the new data
 
-                    FancyToast.makeText(this@MainActivity,"Weather updated",FancyToast.LENGTH_SHORT,FancyToast.SUCCESS,R.drawable.white_cloud,false).show() // Shows a success toast
+                    FancyToast.makeText(this@MainActivity, "Weather updated", FancyToast.LENGTH_SHORT, FancyToast.SUCCESS, R.drawable.white_cloud, false).show() // Shows a success toast
 
-                    val sharedPrefs=getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE) // Gets the shared preferences
-                    sharedPrefs.edit().putString(LAST_RESPONSE,Gson().toJson(responseBody)).putString(LAST_CITY,cityName).apply() // Saves the last response and city
+                    val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) // Gets the shared preferences
+                    sharedPrefs.edit().putString(LAST_RESPONSE, Gson().toJson(responseBody)).putString(LAST_CITY, cityName).apply() // Saves the last response and city
 
-                }else if(isSearchAction){ // If the search action failed
-                    FancyToast.makeText(this@MainActivity,"Please enter a correct city or place...",FancyToast.LENGTH_SHORT,FancyToast.ERROR,R.drawable.white_cloud,false).show()
+                } else if (isSearchAction) { // If the search action failed
+                    FancyToast.makeText(this@MainActivity, "Please enter a correct city or place...", FancyToast.LENGTH_SHORT, FancyToast.ERROR, R.drawable.white_cloud, false).show() // Show an error toast for an invalid city
                 }
             }
 
-            override fun onFailure(call:Call<WeatherApp?>,t:Throwable){ // Called when the request fails
+            override fun onFailure(call: Call<WeatherApp?>, t: Throwable) { // Called when the request fails
                 loadingView.visibility = View.GONE // Hides the loading view
-                FancyToast.makeText(this@MainActivity,"Please check your internet connection",FancyToast.LENGTH_LONG,FancyToast.ERROR,R.drawable.white_cloud,false).show() // Shows an error toast
+                if (!showLastUpdatedData()) { // Try to show last data
+                    FancyToast.makeText(this@MainActivity, "Please check your internet connection", FancyToast.LENGTH_LONG, FancyToast.ERROR, R.drawable.white_cloud, false).show() // Shows an error toast
+                }
             }
         })
     }
 
     // UPDATE UI
     @SuppressLint("SetTextI18n") // Suppresses the SetTextI18n warning
-    private fun updateUI(cityName:String,responseBody:WeatherApp){ // Updates the UI with the weather data
+    private fun updateUI(cityName: String, responseBody: WeatherApp) { // Updates the UI with the weather data
 
-        val main=responseBody.main // Gets the main weather data
-        val wind=responseBody.wind // Gets the wind data
-        val sys=responseBody.sys // Gets the system data
-        val weatherList=responseBody.weather // Gets the weather list
+        val main = responseBody.main // Gets the main weather data
+        val wind = responseBody.wind // Gets the wind data
+        val sys = responseBody.sys // Gets the system data
+        val weatherList = responseBody.weather // Gets the weather list
 
-        binding.temp.text="${main?.temp ?: 0.0} °C" // Sets the temperature
-        binding.windSpeed.text="${wind?.speed ?: 0.0} m/s" // Sets the wind speed
-        binding.humidity.text="${main?.humidity ?: 0} %" // Sets the humidity
+        binding.temp.text = "${main?.temp ?: 0.0} °C" // Sets the temperature
+        binding.windSpeed.text = "${wind?.speed ?: 0.0} m/s" // Sets the wind speed
+        binding.humidity.text = "${main?.humidity ?: 0} %" // Sets the humidity
 
-        val sunrise=sys?.sunrise?.toLong() ?: 0L // Gets the sunrise time
-        val sunset=sys?.sunset?.toLong() ?: 0L // Gets the sunset time
-        binding.sunrise.text="${time(sunrise)} am" // Sets the sunrise time
-        binding.sunset.text="${time(sunset)} pm" // Sets the sunset time
+        val sunrise = sys?.sunrise?.toLong() ?: 0L // Gets the sunrise time
+        val sunset = sys?.sunset?.toLong() ?: 0L // Gets the sunset time
+        binding.sunrise.text = "${time(sunrise)} am" // Sets the sunrise time
+        binding.sunset.text = "${time(sunset)} pm" // Sets the sunset time
 
-        binding.sea.text="${main?.sea_level ?: 0} hPa" // Sets the sea level
+        binding.sea.text = "${main?.sea_level ?: 0} hPa" // Sets the sea level
 
-        val condition=weatherList?.firstOrNull()?.main ?: "unknown" // Gets the weather condition
-        binding.conditions.text=condition // Sets the weather condition
-        binding.maxTemp.text="Max: ${main?.temp_max ?: 0.0} °C" // Sets the max temperature
-        binding.minTemp.text="Min: ${main?.temp_min ?: 0.0} °C" // Sets the min temperature
-        binding.weather.text=condition // Sets the weather condition
+        val condition = weatherList?.firstOrNull()?.main ?: "unknown" // Gets the weather condition
+        binding.conditions.text = condition // Sets the weather condition
+        binding.maxTemp.text = "Max: ${main?.temp_max ?: 0.0} °C" // Sets the max temperature
+        binding.minTemp.text = "Min: ${main?.temp_min ?: 0.0} °C" // Sets the min temperature
+        binding.weather.text = condition // Sets the weather condition
 
-        binding.day.text=dayName(System.currentTimeMillis()) // Sets the day of the week
-        binding.date.text=date() // Sets the date
-        binding.cityName.text=cityName.uppercase(Locale.getDefault()) // Sets the city name in uppercase
+        binding.day.text = dayName(System.currentTimeMillis()) // Sets the day of the week
+        binding.date.text = date() // Sets the date
+        binding.cityName.text = cityName.uppercase(Locale.getDefault()) // Sets the city name in uppercase
 
         changeImagesAccordingtoWeatherCondition(condition) // Changes the images based on the weather condition
     }
 
     // SHOW LAST UPDATED DATA
-    private fun showLastUpdatedData(){ // Shows the last updated weather data
-        val sharedPrefs=getSharedPreferences(PREFS_NAME,Context.MODE_PRIVATE) // Gets the shared preferences
-        val json=sharedPrefs.getString(LAST_RESPONSE,null) // Gets the last response from shared preferences
-        val lastCity=sharedPrefs.getString(LAST_CITY,"India") // Gets the last city from shared preferences
+    private fun showLastUpdatedData(): Boolean { // Shows the last updated weather data and returns true if data was found and shown
+        val sharedPrefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE) // Gets the shared preferences
+        val json = sharedPrefs.getString(LAST_RESPONSE, null) // Gets the last response from shared preferences
+        val lastCity = sharedPrefs.getString(LAST_CITY, "India") // Gets the last city from shared preferences
 
-        if(json!=null){ // Checks if the last response is not null
-            val lastResponse=Gson().fromJson(json,WeatherApp::class.java) // Converts the JSON string to a WeatherApp object
-            updateUI(lastResponse.name ?: lastCity ?: "India",lastResponse) // Updates the UI with the last response
-        }else fetchWeatherData("India") // Fetches weather data for a default city if no last data is available
+        if (json != null) { // Checks if the last response is not null
+            val lastResponse = Gson().fromJson(json, WeatherApp::class.java) // Converts the JSON string to a WeatherApp object
+            updateUI(lastResponse.name ?: lastCity ?: "India", lastResponse) // Updates the UI with the last response
+            loadingView.visibility = View.GONE // Hide loading view since we have shown the last data
+            return true // Return true indicating data was shown
+        }
+        return false // Return false if no data was found
     }
 
+
     // NETWORK OBSERVER
-    private fun registerNetworkCallback(){ // Registers a network callback to listen for network changes
+    private fun registerNetworkCallback() { // Registers a network callback to listen for network changes
 
-        networkCallback=object:ConnectivityManager.NetworkCallback(){ // Creates a new network callback
+        networkCallback = object : ConnectivityManager.NetworkCallback() { // Creates a new network callback
 
-            override fun onAvailable(network:Network){ // Called when a network is available
-                if(!isConnected){ // Checks if the device is not connected
-                    isConnected=true // Sets the connected flag to true
-                    runOnUiThread{ // Runs the code on the main thread
-                        // FancyToast.makeText(this@MainActivity,"Feed Updated.",FancyToast.LENGTH_SHORT,FancyToast.SUCCESS,R.drawable.white_cloud,false).show()
+            override fun onAvailable(network: Network) { // Called when a network is available
+                if (!isConnected) { // Checks if the device is not connected
+                    isConnected = true // Sets the connected flag to true
+                    runOnUiThread { // Runs the code on the main thread
                         startLocationFlow() // Retries the location flow
                     }
                 }
             }
 
-            override fun onLost(network:Network){ // Called when a network is lost
-                isConnected=false // Sets the connected flag to false
-                runOnUiThread{ // Runs the code on the main thread
-                    showLastUpdatedData() // Shows the last updated data
-                    FancyToast.makeText(this@MainActivity,"Please check your internet connection",FancyToast.LENGTH_LONG,FancyToast.WARNING,R.drawable.white_cloud,false).show() // Shows a warning toast
+            override fun onLost(network: Network) { // Called when a network is lost
+                isConnected = false // Sets the connected flag to false
+                runOnUiThread { // Runs the code on the main thread
+                    FancyToast.makeText(this@MainActivity, "Please check your internet connection", FancyToast.LENGTH_LONG, FancyToast.WARNING, R.drawable.white_cloud, false).show() // Shows a warning toast
                 }
             }
         }
@@ -424,45 +439,60 @@ class MainActivity : AppCompatActivity() { // Main activity of the application
     }
 
     // CHECK INTERNET
-    private fun checkInternet():Boolean{ // Checks if the device is connected to the internet
-        val capabilities=connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork) // Gets the network capabilities
-        return capabilities!=null && // Checks if the capabilities are not null
+    private fun checkInternet(): Boolean { // Checks if the device is connected to the internet
+        val capabilities = connectivityManager.getNetworkCapabilities(connectivityManager.activeNetwork) // Gets the network capabilities
+        return capabilities != null && // Checks if the capabilities are not null
                 (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) || // Checks if Wi-Fi is available
                         capabilities.hasTransport(NetworkCapabilities.TRANSPORT_CELLULAR)) // Checks if cellular is available
     }
 
     // CHANGE IMAGES ACCORDING TO WEATHER CONDITION
-    private fun changeImagesAccordingtoWeatherCondition(conditions:String){ // Changes the background and animation based on the weather condition
-        when(conditions){ // Switches on the weather condition
-            "Clear Sky","Sunny","Clear"->{ binding.root.setBackgroundResource(R.drawable.sunny_background); binding.lottieAnimationView.setAnimation(R.raw.sun) } // Sets the background and animation for sunny weather
-            "Partly Clouds","Clouds","Overcast","Mist","Foggy","Haze"->{ binding.root.setBackgroundResource(R.drawable.colud_background); binding.lottieAnimationView.setAnimation(R.raw.cloud) } // Sets the background and animation for cloudy weather
-            "Light Rain","Drizzle","Moderate Rain","Showers","Heavy Rain","Rain"->{ binding.root.setBackgroundResource(R.drawable.rain_background); binding.lottieAnimationView.setAnimation(R.raw.rain) } // Sets the background and animation for rainy weather
-            "Light Snow","Moderate Snow","Heavy Snow","Blizzard","Snow"->{ binding.root.setBackgroundResource(R.drawable.snow_background); binding.lottieAnimationView.setAnimation(R.raw.snow) } // Sets the background and animation for snowy weather
-            else->{ binding.root.setBackgroundResource(R.drawable.sunny_background); binding.lottieAnimationView.setAnimation(R.raw.sun) } // Sets the default background and animation
+    private fun changeImagesAccordingtoWeatherCondition(conditions: String) { // Changes the background and animation based on the weather condition
+        when (conditions) { // Switches on the weather condition
+            "Clear Sky", "Sunny", "Clear" -> { // When the weather is clear or sunny
+                binding.root.setBackgroundResource(R.drawable.sunny_background) // Set the background to the sunny background drawable
+                binding.lottieAnimationView.setAnimation(R.raw.sun) // Set the Lottie animation to the sun animation
+            } // Sets the background and animation for sunny weather
+            "Partly Clouds", "Clouds", "Overcast", "Mist", "Foggy", "Haze" -> { // When the weather is cloudy or hazy
+                binding.root.setBackgroundResource(R.drawable.colud_background) // Set the background to the cloudy background drawable
+                binding.lottieAnimationView.setAnimation(R.raw.cloud) // Set the Lottie animation to the cloud animation
+            } // Sets the background and animation for cloudy weather
+            "Light Rain", "Drizzle", "Moderate Rain", "Showers", "Heavy Rain", "Rain" -> { // When it is raining
+                binding.root.setBackgroundResource(R.drawable.rain_background) // Set the background to the rainy background drawable
+                binding.lottieAnimationView.setAnimation(R.raw.rain) // Set the Lottie animation to the rain animation
+            } // Sets the background and animation for rainy weather
+            "Light Snow", "Moderate Snow", "Heavy Snow", "Blizzard", "Snow" -> { // When it is snowing
+                binding.root.setBackgroundResource(R.drawable.snow_background) // Set the background to the snowy background drawable
+                binding.lottieAnimationView.setAnimation(R.raw.snow) // Set the Lottie animation to the snow animation
+            } // Sets the background and animation for snowy weather
+            else -> { // For any other weather condition
+                binding.root.setBackgroundResource(R.drawable.sunny_background) // Set the background to the sunny background drawable as a default
+                binding.lottieAnimationView.setAnimation(R.raw.sun) // Set the Lottie animation to the sun animation as a default
+            } // Sets the default background and animation
         }
         binding.lottieAnimationView.playAnimation() // Plays the Lottie animation
     }
 
     // DAY NAME
-    fun dayName(timeStamp:Long):String{ // Gets the day name from a timestamp
-        val sdf=SimpleDateFormat("EEEE",Locale.getDefault()) // Creates a new SimpleDateFormat object
+    fun dayName(timeStamp: Long): String { // Gets the day name from a timestamp
+        val sdf = SimpleDateFormat("EEEE", Locale.getDefault()) // Creates a new SimpleDateFormat object
         return sdf.format(Date()) // Returns the formatted day name
     }
 
     // DATE
-    private fun date():String{ // Gets the current date
-        val sdf=SimpleDateFormat("dd MMM yyyy",Locale.getDefault()) // Creates a new SimpleDateFormat object
+    private fun date(): String { // Gets the current date
+        val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) // Creates a new SimpleDateFormat object
         return sdf.format(Date()) // Returns the formatted date
     }
 
     // TIME
-    private fun time(timeStamp:Long):String{ // Gets the time from a timestamp
-        val sdf=SimpleDateFormat("HH:mm",Locale.getDefault()) // Creates a new SimpleDateFormat object
-        return sdf.format(Date(timeStamp*1000)) // Returns the formatted time
+    private fun time(timeStamp: Long): String { // Gets the time from a timestamp
+        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault()) // Creates a new SimpleDateFormat object
+        return sdf.format(Date(timeStamp * 1000)) // Returns the formatted time
     }
 
     // ON DESTROY
-    override fun onDestroy(){ // Called when the activity is destroyed
+    override fun onDestroy() { // Called when the activity is destroyed
         super.onDestroy() // Calls the parent class's onDestroy method
         connectivityManager.unregisterNetworkCallback(networkCallback) // Unregisters the network callback
     }

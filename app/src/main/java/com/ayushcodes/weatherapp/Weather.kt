@@ -1,9 +1,10 @@
-package com.ayushcodes.weatherapp // Defines the package name for this file
+package com.ayushcodes.weatherapp // Defines the package name for the application
 
-// Data class representing weather condition details
+// DATA CLASS FOR WEATHER
+
+// This data class represents the weather data from the OpenWeatherMap API.
+// It contains information about the weather description and main weather condition.
 data class Weather(
-    val description: String?, // Weather condition within the group (e.g., "light rain", "clear sky")
-    val icon: String?, // Weather icon id
-    val id: Int?, // Weather condition id
-    val main: String? // Group of weather parameters (Rain, Snow, Extreme etc.)
-)
+    val description: String, // The weather description
+    val main: String // The main weather condition
+) // A data class that represents the weather data from the OpenWeatherMap API
